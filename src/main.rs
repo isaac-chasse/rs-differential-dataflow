@@ -1,3 +1,5 @@
+use std::{collections::HashMap, vec};
+
 #[derive(Debug, Clone)]
 struct MultiSet {
     record: String,
@@ -49,6 +51,52 @@ impl Collection {
             .collect();
         Collection(out)
     }
+
+    #[allow(dead_code)]
+    fn reduce<F>(&self, f: F) -> Collection
+        where F: Fn(Vec<(String, i32)>) -> Vec<(String, i32)>
+    {
+        // There is an opportunity to improve this implementation using
+        // `map`, `or_default`, `flat_map` etc that can be more efficient
+        // and more idiomatic
+        let mut keys: HashMap<String, Vec<(String, i32)>> = HashMap::new();
+
+        for multi_set in &self.0 {
+            let entry = keys.entry(multi_set.record.clone()).or_default();
+            entry.push((multi_set.record.clone(), multi_set.multiplicity));
+        }
+
+        // unused `key` variable here can be improved im sure
+        let mut out = vec![];
+        for (_key, vals) in keys {
+            let results = f(vals);
+            for (val, multiplicity) in results {
+                out.push(MultiSet::new(val, multiplicity));
+            }
+        }
+        Collection(out)
+    }
+
+    // fn count(self) -> () {
+    //     ()
+    // }
+
+    // fn sum(self) -> () {
+    //     ()
+    // }
+
+    // fn distinct(self) -> () {
+    //     ()
+    // }
+
+    // fn min(self) -> () {
+    //     ()
+    // }
+
+    // fn max(self) -> () {
+    //     ()
+    // }
+
 }
 
 fn main() {
@@ -77,4 +125,6 @@ fn main() {
 
     let collection_ftr_ab = collection_ab.clone().filter(|ms| ms.multiplicity > 1);
     println!("{:?}", collection_ftr_ab);
+
+    // let collection_red_ab = collection_ab.clone().reduce()
 }
