@@ -1,4 +1,4 @@
-use std::{collections::HashMap, vec};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 struct MultiSet {
@@ -77,9 +77,13 @@ impl Collection {
         Collection(out)
     }
 
-    // fn count(self) -> () {
-    //     ()
-    // }
+    fn count(&self) -> Collection {
+        fn inner_count(vals: Vec<(String, i32)>) -> Vec<(String, i32)> {
+            let out = vals.iter().map(|(_, multiplicity)| *multiplicity).sum();
+            vec![("count".to_string(), out)]
+        }
+        self.reduce(inner_count)
+    }
 
     // fn sum(self) -> () {
     //     ()
@@ -96,7 +100,6 @@ impl Collection {
     // fn max(self) -> () {
     //     ()
     // }
-
 }
 
 fn main() {
@@ -104,27 +107,28 @@ fn main() {
     let ms1 = MultiSet::new(String::from("orange"), 1);
     let ms2 = MultiSet::new(String::from("apple"), 4);
     let ms3 = MultiSet::new(String::from("pear"), 1);
-    println!("{:?}, {:?}, {:?}, {:?}", ms0, ms1, ms2, ms3);
+    println!("{:?}\n{:?}\n{:?}\n{:?}", ms0, ms1, ms2, ms3);
 
     let collection_a = Collection(vec![ms0, ms1]);
     let collection_b = Collection(vec![ms2, ms3]);
-    println!("{:?}", collection_a);
-    println!("{:?}", collection_b);
+    // println!("{:?}", collection_a);
+    // println!("{:?}", collection_b);
 
     let collection_ab = collection_a.clone().concat(collection_b.clone());
     println!("{:?}", collection_ab);
 
-    let collection_neg_ab = collection_a.concat(collection_b.negate());
-    println!("{:?}", collection_neg_ab);
+    // let collection_neg_ab = collection_a.concat(collection_b.negate());
+    // println!("{:?}", collection_neg_ab);
 
-    let collection_upp_ab = collection_ab.clone()
-        .map(|ms| {
-            MultiSet::new(ms.record.to_uppercase(), ms.multiplicity)
-        });
-    println!("{:?}", collection_upp_ab);
+    // let collection_upp_ab = collection_ab.clone()
+    //     .map(|ms| {
+    //         MultiSet::new(ms.record.to_uppercase(), ms.multiplicity)
+    //     });
+    // println!("{:?}", collection_upp_ab);
 
-    let collection_ftr_ab = collection_ab.clone().filter(|ms| ms.multiplicity > 1);
-    println!("{:?}", collection_ftr_ab);
+    // let collection_ftr_ab = collection_ab.clone().filter(|ms| ms.multiplicity > 1);
+    // println!("{:?}", collection_ftr_ab);
 
-    // let collection_red_ab = collection_ab.clone().reduce()
+    let collection_cnt_ab = collection_ab.clone().count();
+    println!("{:?}", collection_cnt_ab);
 }
