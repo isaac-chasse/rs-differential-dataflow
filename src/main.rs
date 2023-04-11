@@ -15,7 +15,12 @@ impl MultiSet {
 #[derive(Debug, Clone)]
 struct Collection(Vec<MultiSet>);
 
+
+#[allow(dead_code)]
 impl Collection {
+    /// Combines two collections into one. `concat` is the same as adding two collections 
+    /// together. `concat` can let us copy both elements into one list that outputs a 
+    /// (record, multiplicity) pair.
     fn concat(self, other: Collection) -> Collection {
         let mut out: Vec<MultiSet> = vec![];
         out.extend(self.0);
@@ -23,6 +28,8 @@ impl Collection {
         Collection(out)
     }
 
+    /// Multiplies all the multiplicities by -1. You can use `concat` and `negate` together
+    /// to substract collections.
     fn negate(self) -> Collection {
         let out = self.0
             .into_iter()
@@ -31,6 +38,8 @@ impl Collection {
         Collection(out)
     }
 
+    /// Applies a function `f` to all the records in the collection and produces a new collection
+    /// containing `f(record)`.
     fn map<F>(&self, f: F) -> Collection 
         where F: Fn(&MultiSet) -> MultiSet
     {
@@ -41,6 +50,8 @@ impl Collection {
         Collection(out)
     }
 
+    /// Applies a function `f` to all the records in the collection and produces a new collection
+    /// containing `record if f(record) == true`.
     fn filter<F>(&self, f: F) -> Collection
         where F: Fn(&MultiSet) -> bool
     {
@@ -52,7 +63,10 @@ impl Collection {
         Collection(out)
     }
 
-    #[allow(dead_code)]
+    /// This operation is predicated onn a key-value structure. Takes every input in the collection
+    /// and applies a function `f` to the multiset of the values associated with that key, returning
+    /// a collection containing `(key, f(values associated with key))`. We can also define functions 
+    /// built on top of `reduce`, seen below.
     fn reduce<F>(&self, f: F) -> Collection
         where F: Fn(Vec<(String, i32)>) -> Vec<(String, i32)>
     {
@@ -77,21 +91,62 @@ impl Collection {
         Collection(out)
     }
 
+    /// Returns the number of values associated with each key
     fn count(&self) -> Collection {
-        fn inner_count(vals: Vec<(String, i32)>) -> Vec<(String, i32)> {
-            let out = vals.iter().map(|(_, multiplicity)| *multiplicity).sum();
-            vec![("count".to_string(), out)]
-        }
-        self.reduce(inner_count)
+        let reduced = self.reduce(|vals| {
+            let count = vals.len() as i32;
+            vec![(vals[0].0.clone(), count)]
+        });
+        reduced
     }
 
-    // fn sum(self) -> () {
-    //     ()
-    // }
+    /// Returns the sum of the values associated with each key
+    fn sum(&self) -> Collection {
+        let reduced = self.reduce(|vals| {
+            let sum = vals
+                .iter()
+                .map(|(_, multiplicity)| multiplicity).sum();
+            vec![(vals[0].0.clone(), sum)]
+        });
+        reduced
+    }
 
-    // fn distinct(self) -> () {
-    //     ()
-    // }
+    /// returns the distinct set of values associated with each key
+    fn distinct(&self) -> Collection {
+        let reduced = self.reduce(|vals| {
+            let mut distinct: Vec<_> = vals
+                .iter()
+                .map(|(val, _)| val.clone())
+                .collect();
+            distinct.sort_unstable();
+            distinct.dedup();
+            let out = distinct
+                .into_iter()
+                .map(|val| (val, 1))
+                .collect();
+            out
+        });
+        reduced
+    }
+
+    /// Produces a normalized, logically equivalent version of the input collection
+    /// containing exactly one instance of each record, and no records with a multiplicity
+    /// of 0. 
+    fn consolidate(&self) -> Collection {
+        // tbh I think this is wrong -- currently outputs MultiSet(record, 1) for Collection
+        let reduced = self.reduce(|vals| {
+            let mut count = 0;
+            let mut out = vec![];
+            for (record, multiplicity) in vals {
+                count += multiplicity;
+                if multiplicity > 0 && count == multiplicity {
+                    out.push((record.clone(), multiplicity));
+                }
+            }
+            out
+        });
+        reduced
+    }
 
     // fn min(self) -> () {
     //     ()
@@ -129,6 +184,16 @@ fn main() {
     // let collection_ftr_ab = collection_ab.clone().filter(|ms| ms.multiplicity > 1);
     // println!("{:?}", collection_ftr_ab);
 
-    let collection_cnt_ab = collection_ab.clone().count();
-    println!("{:?}", collection_cnt_ab);
+    // let collection_cnt_ab = collection_ab.clone().count();
+    // println!("{:?}", collection_cnt_ab);
+
+    // let collection_sum_ab = collection_ab.clone().sum();
+    // println!("{:?}", collection_sum_ab);
+
+    // let collection_dst_ab = collection_ab.clone().distinct();
+    // println!("{:?}", collection_dst_ab);
+
+    let collection_consolidated = collection_ab.clone().consolidate();
+    println!("{:?}", collection_consolidated);
+    
 }
