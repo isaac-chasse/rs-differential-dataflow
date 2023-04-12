@@ -1,12 +1,15 @@
-use std::collections::{HashMap, HashSet};
+use std::{collections::{HashMap, HashSet}, hash::Hash};
 
 use crate::multiset::MultiSet;
 
 /// A collection of `MultiSet`s, where each `MultiSet` represents a record and its multiplicity.
 #[derive(Debug, Clone)]
-pub struct Collection(pub Vec<MultiSet>);
+pub struct  Collection<T: Ord>(pub Vec<MultiSet<T>>);
 
-impl PartialEq for Collection {
+impl<T: Clone> PartialEq for Collection<T> 
+where 
+    T: Ord,
+{
     /// Returns `true` if `self` and `other` have the same elements in the same order.
     fn eq(&self, other: &Self) -> bool {
         let mut self_vec = self.0.clone();
@@ -17,10 +20,16 @@ impl PartialEq for Collection {
     }
 }
 
-impl Eq for Collection {}
+impl<T: Clone> Eq for Collection<T> 
+where 
+    T: Ord,
+{}
 
 #[allow(dead_code)]
-impl Collection {
+impl<T: Clone> Collection<T> 
+where 
+    T: Ord,
+{
     /// Combines two collections into one. `concat` is the same as adding two collections
     /// together. `concat` can let us copy both elements into one list that outputs a
     /// (record, multiplicity) pair.
@@ -41,8 +50,8 @@ impl Collection {
     ///     MultiSet::new("d".to_string(), 4),
     /// ]));
     /// ```
-    pub fn concat(self, other: Collection) -> Collection {
-        let mut out: Vec<MultiSet> = vec![];
+    pub fn concat(self, other: Collection<T>) -> Collection<T> {
+        let mut out: Vec<MultiSet<T>> = vec![];
         out.extend(self.0);
         out.extend(other.0);
         Collection(out)
@@ -64,11 +73,11 @@ impl Collection {
     ///     MultiSet::new("b".to_string(), 2),
     /// ]));
     /// ```
-    pub fn negate(self) -> Collection {
+    pub fn negate(self) -> Collection<T> {
         let out = self.0
             .into_iter()
             .map(|MultiSet { record, multiplicity }| MultiSet { record, multiplicity: -multiplicity })
-            .collect::<Vec<MultiSet>>();
+            .collect::<Vec<MultiSet<T>>>();
         Collection(out)
     }
 
@@ -88,8 +97,8 @@ impl Collection {
     ///     MultiSet::new("B".to_string(), 2),
     /// ]));
     /// ```
-    pub fn map<F>(&self, f: F) -> Collection 
-        where F: Fn(&MultiSet) -> MultiSet
+    pub fn map<F>(&self, f: F) -> Collection<T> 
+        where F: Fn(&MultiSet<T>) -> MultiSet<T>
     {
         let out = self.0
             .iter()
@@ -113,8 +122,8 @@ impl Collection {
     ///     MultiSet::new("b".to_string(), 2),
     /// ]));
     /// ```
-    pub fn filter<F>(&self, f: F) -> Collection
-        where F: Fn(&MultiSet) -> bool
+    pub fn filter<F>(&self, f: F) -> Collection<T>
+        where F: Fn(&MultiSet<T>) -> bool
     {
         let out = self.0
             .iter()
@@ -150,13 +159,12 @@ impl Collection {
     ///     MultiSet::new("b".to_string(), 6),
     /// ]));
     /// ```
-    pub fn reduce<F>(&self, f: F) -> Collection
-        where F: Fn(Vec<(String, i32)>) -> Vec<(String, i32)>
+    pub fn reduce<F>(&self, f: F) -> Collection<T>
+    where
+        F: Fn(Vec<(T, i32)>) -> Vec<(T, i32)>,
+        T: Eq + std::hash::Hash,
     {
-        // There is an opportunity to improve this implementation using
-        // `map`, `or_default`, `flat_map` etc that can be more efficient
-        // and more idiomatic
-        let mut keys: HashMap<String, Vec<(String, i32)>> = HashMap::new();
+        let mut keys: HashMap<T, Vec<(T, i32)>> = HashMap::new();
 
         for multi_set in &self.0 {
             let entry = keys.entry(multi_set.record.clone()).or_default();
@@ -201,7 +209,10 @@ impl Collection {
     ///     MultiSet::new("b".to_string(), 2),
     /// ]));
     /// ```
-    pub fn count(&self) -> Collection {
+    pub fn count(&self) -> Collection<T>
+    where 
+        T: Hash
+    {
         let reduced = self.reduce(|vals| {
             let count = vals.len() as i32;
             vec![(vals[0].0.clone(), count)]
@@ -229,7 +240,10 @@ impl Collection {
     ///     MultiSet::new("b".to_string(), 6),
     /// ]));
     /// ```
-    pub fn sum(&self) -> Collection {
+    pub fn sum(&self) -> Collection<T> 
+    where 
+        T: Hash
+    {
         let reduced = self.reduce(|vals| {
             let sum = vals
                 .iter()
@@ -269,7 +283,10 @@ impl Collection {
     /// - The order of the elements in the resulting collection is not guaranteed.
     /// - If the input collection is empty, the resulting collection will also be empty.
     ///
-    pub fn distinct(&self) -> Collection {
+    pub fn distinct(&self) -> Collection<T> 
+    where 
+        T: Hash
+    {
         let reduced = self.reduce(|vals| {
             let mut distinct = std::collections::HashSet::new();
             for (val, _) in vals {
@@ -298,7 +315,10 @@ impl Collection {
     ///     MultiSet::new("a".to_string(), 2),
     /// ]);
     /// ```
-    pub fn consolidate(&self) -> Collection {
+    pub fn consolidate(&self) -> Collection<T> 
+    where 
+        T: Hash
+    {
         // tbh I think this is wrong -- currently outputs MultiSet(record, 1) for Collection
         let reduced = self.reduce(|vals| {
             let mut count = 0;
@@ -337,7 +357,10 @@ impl Collection {
     ///     MultiSet::new("b".to_string(), 8),
     /// ]));
     /// ```
-    pub fn join(&self, other: &Collection) -> Collection {
+    pub fn join(&self, other: &Collection<T>) -> Collection<T> 
+    where 
+        T: Hash
+    {
         let out = self.0.iter()
             .flat_map(|ms1| other.0.iter().filter(move |ms2| ms1.record == ms2.record)
                 .map(move |ms2| MultiSet::new(ms1.record.clone(), ms1.multiplicity * ms2.multiplicity)))
@@ -373,9 +396,9 @@ impl Collection {
     ///     MultiSet::new("b".to_string(), 1),
     /// ]));
     /// ```
-    pub fn iterate<F>(&self, f: F) -> Collection 
+    pub fn iterate<F>(&self, f: F) -> Collection<T>
     where 
-        F: Fn(&Collection) -> Collection,
+        F: Fn(&Collection<T>) -> Collection<T>,
     {
         let mut curr = Collection(self.0.clone());
         loop {
