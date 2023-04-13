@@ -319,7 +319,7 @@ where
     where 
         T: Hash
     {
-        // tbh I think this is wrong -- currently outputs MultiSet(record, 1) for Collection
+        // BUG: tbh I think this is wrong -- currently outputs MultiSet(record, 1) for Collection
         let reduced = self.reduce(|vals| {
             let mut count = 0;
             let mut out = vec![];
