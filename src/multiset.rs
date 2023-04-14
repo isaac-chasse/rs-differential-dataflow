@@ -1,5 +1,8 @@
 use std::cmp::Ordering;
 
+/// A MultiSet is some combination of `(record, multiplicity)` where
+/// `record` is the data held by the Multiset and `multiplicity` is 
+/// the occurence of that data.
 #[derive(Debug)]
 pub struct MultiSet<T>
 where

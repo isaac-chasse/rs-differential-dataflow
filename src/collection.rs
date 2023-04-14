@@ -30,6 +30,11 @@ impl<T: Clone> Collection<T>
 where 
     T: Ord,
 {
+    /// Instantiates a new Collection<T> from a Vec of MultiSet<T>. All <T> must be equivalent currently.
+    pub fn new(multiset_vec: Vec<MultiSet<T>>) -> Collection<T> {
+        Collection(multiset_vec)
+    }
+
     /// Combines two collections into one. `concat` is the same as adding two collections
     /// together. `concat` can let us copy both elements into one list that outputs a
     /// (record, multiplicity) pair.

@@ -26,33 +26,32 @@ mod tests {
         );
     }
 
-    // #[test]
-    // fn test_fixpoint_computation() {
-    //     use rs_differential_dataflow::collection::Collection;
-    //     use rs_differential_dataflow::multiset::MultiSet;
+    #[test]
+    fn test_fixpoint_computation() {
+        use rs_differential_dataflow::collection::Collection;
+        use rs_differential_dataflow::multiset::MultiSet;
 
-    //     // Option 1 is to rebuild this fn to work with Collection<(i32, i32)>
-    //     fn collection_fixpoint(coll: Collection<(i32, i32)>) -> Collection<(i32, i32)> {
-    //         coll.map(|ms| MultiSet { record: ms.record, multiplicity: ms.record.1 })
-    //             .map(|ms| MultiSet { record: (ms.record.0 + 1, ms.record.1), multiplicity: ms.multiplicity })
-    //             .concat(coll.map(|ms| MultiSet { record: ms.record, multiplicity: ms.record.1 }))
-    //             .filter(|ms| ms.record.0 <= 5)
-    //             .map(|ms| MultiSet { record: ms.record, multiplicity: ms.multiplicity })
-    //             .distinct()
-    //     }
+        // Option 1 is to rebuild this fn to work with Collection<(i32, i32)>
+        fn collection_fixpoint(coll: Collection<i32>) -> Collection<i32> {
+            coll.map(|ms| MultiSet { record: ms.record.clone() + 1 , multiplicity: ms.multiplicity.clone() })
+                .concat(coll)
+                .filter(|ms| ms.record <= 5)
+                .distinct()
+        }
 
-    //     let collection = Collection(
-    //         vec![MultiSet::new(1, 1)]
-    //     );
+        let collection = Collection::new(
+            vec![MultiSet::new(1, 1)]
+        );
 
-    //     let result = collection.iterate(|collection| {
-    //         let retyped_colleciton = collection.map(|ms| {
-    //             let new_vec = vec![];
-    //             vec.push((ms.record, ms.multiplicity))
-    //         });
-            
-    //     });
-    //     println!("{:?}", result);
+        let expected = Collection(vec![
+            MultiSet { record: 1, multiplicity: 1 }, 
+            MultiSet { record: 2, multiplicity: 1 }, 
+            MultiSet { record: 3, multiplicity: 1 }, 
+            MultiSet { record: 4, multiplicity: 1 }, 
+            MultiSet { record: 5, multiplicity: 1 }
+        ]);
 
-    // }
+        let result = collection.iterate(|cl| collection_fixpoint(cl.clone()));
+        assert_eq!(result, expected);
+    }
 }
